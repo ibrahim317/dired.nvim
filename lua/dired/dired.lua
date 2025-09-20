@@ -62,13 +62,10 @@ function M.open_dir(path)
 
     history.push_path(vim.g.current_dired_path)
     
-    -- Create a new buffer instead of editing the directory directly
-    -- This avoids swap file conflicts
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_set_current_buf(buf)
-    
-    -- Set the buffer name to the directory path
-    vim.api.nvim_buf_set_name(buf, path)
+    -- Use enew to create a new buffer, then set the name
+    -- This avoids swap file conflicts while preserving autocommand behavior
+    vim.cmd(string.format("%s noautocmd enew", keep_alt))
+    vim.api.nvim_buf_set_name(0, path)
     
     M.init_dired()
 end
@@ -94,10 +91,10 @@ function M.enter_dir()
     end
 
     if file.filetype == "directory" then
-        -- Create a new buffer for directory to avoid swap file conflicts
-        local buf = vim.api.nvim_create_buf(false, true)
-        vim.api.nvim_set_current_buf(buf)
-        vim.api.nvim_buf_set_name(buf, file.filepath)
+        -- Use enew to create a new buffer for directory to avoid swap file conflicts
+        -- This preserves keepalt and noautocmd behaviors
+        vim.cmd("keepalt noautocmd enew")
+        vim.api.nvim_buf_set_name(0, file.filepath)
         history.push_path(vim.g.current_dired_path)
         M.init_dired()
     else

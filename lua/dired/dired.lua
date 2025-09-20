@@ -23,8 +23,12 @@ function M.init_dired()
 
     -- set current path
     vim.g.current_dired_path = path
-    -- set buffer name to path
-    vim.api.nvim_buf_set_name(0, path) -- 0 is current buffer
+    
+    -- Only set buffer name if it's not already set to avoid conflicts
+    local current_name = vim.api.nvim_buf_get_name(0)
+    if current_name == "" or current_name ~= path then
+        vim.api.nvim_buf_set_name(0, path) -- 0 is current buffer
+    end
 
     vim.bo.filetype = "dired"
     vim.bo.swapfile = false
@@ -57,7 +61,15 @@ function M.open_dir(path)
     end
 
     history.push_path(vim.g.current_dired_path)
-    vim.cmd(string.format("%s noautocmd edit %s", keep_alt, vim.fn.fnameescape(path)))
+    
+    -- Create a new buffer instead of editing the directory directly
+    -- This avoids swap file conflicts
+    local buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_current_buf(buf)
+    
+    -- Set the buffer name to the directory path
+    vim.api.nvim_buf_set_name(buf, path)
+    
     M.init_dired()
 end
 
@@ -82,14 +94,14 @@ function M.enter_dir()
     end
 
     if file.filetype == "directory" then
-        vim.cmd(string.format("keepalt noautocmd edit %s", vim.fn.fnameescape(file.filepath)))
-    else
-        vim.cmd(string.format("keepalt edit %s", vim.fn.fnameescape(file.filepath)))
-    end
-
-    if file.filetype == "directory" then
+        -- Create a new buffer for directory to avoid swap file conflicts
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_set_current_buf(buf)
+        vim.api.nvim_buf_set_name(buf, file.filepath)
         history.push_path(vim.g.current_dired_path)
         M.init_dired()
+    else
+        vim.cmd(string.format("keepalt edit %s", vim.fn.fnameescape(file.filepath)))
     end
 
     -- if file is a directory then enter inside the directory
